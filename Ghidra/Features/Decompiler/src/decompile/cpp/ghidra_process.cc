@@ -83,7 +83,7 @@ GhidraDecompCapability GhidraDecompCapability::ghidraDecompCapability;
 /// This method reads an id selecting the Architecture to act on, but it can be overloaded
 /// to read any set of data from the Ghidra client to configure how the command is executed.
 /// Individual parameters are read using the method protocol.
-void GhidraCommand::loadParameters(void)
+void GhidraCommand::loadParameters(istream &sin)
 
 {
   int4 id = -1;
@@ -105,7 +105,7 @@ void GhidraCommand::loadParameters(void)
 /// This method sends any warnings accumulated during execution back, but it can be overloaded
 /// to send back any kind of information. Individual records are sent using
 /// the message protocol.
-void GhidraCommand::sendResult(void)
+void GhidraCommand::sendResult(ostream &sout)
 
 {
   if (ghidra != (ArchitectureGhidra *)0) {
@@ -122,17 +122,17 @@ void GhidraCommand::sendResult(void)
 ///
 /// It wraps the sequence with appropriate error handling and message protocol.
 /// \return the meta-command (0=continue, 1=terminate) as issued by the command.
-int4 GhidraCommand::doit(void)
+int4 GhidraCommand::doit(istream &sin, ostream &sout)
 
 {
   status = 0;
   sout.write("\000\000\001\006",4); // Command response header
   try {
-    loadParameters();
+    loadParameters(sin);
     int4 type = ArchitectureGhidra::readToAnyBurst(sin);
     if (type != 3)
       throw JavaError("alignment","Missing end of command");
-    rawAction();
+    rawAction(sin, sout);
   }
   catch(DecoderError &err) {
     string errmsg;
@@ -153,13 +153,13 @@ int4 GhidraCommand::doit(void)
     errmsg = "Low-level Error: " + err.explain;
     ghidra->printMessage( errmsg );
   }
-  sendResult();
+  sendResult(sout);
   sout.write("\000\000\001\007",4); // Command response closer
   sout.flush();
   return status;
 }
 
-void RegisterProgram::loadParameters(void)
+void RegisterProgram::loadParameters(istream &sin)
 
 {
   pspec.clear();
@@ -173,7 +173,7 @@ void RegisterProgram::loadParameters(void)
 }
 
 
-void RegisterProgram::rawAction(void)
+void RegisterProgram::rawAction(istream &sin, ostream &sout)
 
 {
   int4 i;
@@ -200,16 +200,16 @@ void RegisterProgram::rawAction(void)
   archid = open;
 }
 
-void RegisterProgram::sendResult(void)
+void RegisterProgram::sendResult(ostream &sout)
 
 {
   sout.write("\000\000\001\016",4);
   sout << dec << archid;
   sout.write("\000\000\001\017",4);
-  GhidraCommand::sendResult();
+  GhidraCommand::sendResult(sout);
 }
 
-void DeregisterProgram::loadParameters(void)
+void DeregisterProgram::loadParameters(istream &sin)
 
 {
   inid = -1;
@@ -228,7 +228,7 @@ void DeregisterProgram::loadParameters(void)
   ghidra->clearWarnings();
 }
 
-void DeregisterProgram::rawAction(void)
+void DeregisterProgram::rawAction(istream &sin, ostream &sout)
 
 {
 #ifdef __REMOTE_SOCKET__
@@ -250,16 +250,16 @@ void DeregisterProgram::rawAction(void)
     res = 0;
 }
 
-void DeregisterProgram::sendResult(void)
+void DeregisterProgram::sendResult(ostream &sout)
 
 {
   sout.write("\000\000\001\016",4);
   sout << dec << res;
   sout.write("\000\000\001\017",4);
-  GhidraCommand::sendResult();
+  GhidraCommand::sendResult(sout);
 }
 
-void FlushNative::rawAction(void)
+void FlushNative::rawAction(istream &sin, ostream &sout)
 
 {
   Scope *globscope = ghidra->symboltab->getGlobalScope();
@@ -272,25 +272,25 @@ void FlushNative::rawAction(void)
   res = 0;
 }
 
-void FlushNative::sendResult(void)
+void FlushNative::sendResult(ostream &sout)
 
 {
   sout.write("\000\000\001\016",4);
   sout << dec << res;
   sout.write("\000\000\001\017",4);
-  GhidraCommand::sendResult();
+  GhidraCommand::sendResult(sout);
 }
 
-void DecompileAt::loadParameters(void)
+void DecompileAt::loadParameters(istream &sin)
 
 {
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
   PackedDecode decoder(ghidra);
   ArchitectureGhidra::readStringStream(sin,decoder);	// Read encoded address directly from in stream
   addr = Address::decode(decoder); 		// Decode for functions address
 }
 
-void DecompileAt::rawAction(void) 
+void DecompileAt::rawAction(istream &sin, ostream &sout) 
 
 {
   Funcdata *fd = ghidra->symboltab->getGlobalScope()->queryFunction(addr);
@@ -334,17 +334,17 @@ void DecompileAt::rawAction(void)
   sout.write("\000\000\001\017",4);
 }
 
-void StructureGraph::loadParameters(void)
+void StructureGraph::loadParameters(istream &sin)
 
 {
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
 
   PackedDecode decoder(ghidra);
   ArchitectureGhidra::readStringStream(sin,decoder);
   ingraph.decode(decoder);
 }
 
-void StructureGraph::rawAction(void)
+void StructureGraph::rawAction(istream &sin, ostream &sout)
 
 {
   BlockGraph resultgraph;
@@ -365,17 +365,17 @@ void StructureGraph::rawAction(void)
   ingraph.clear();
 }
 
-void SetAction::loadParameters(void)
+void SetAction::loadParameters(istream &sin)
 
 {
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
   actionstring.clear();
   printstring.clear();
   ArchitectureGhidra::readStringStream(sin,actionstring);
   ArchitectureGhidra::readStringStream(sin,printstring);
 }
 
-void SetAction::rawAction(void)
+void SetAction::rawAction(istream &sin, ostream &sout)
 
 {
   res = false;
@@ -405,20 +405,20 @@ void SetAction::rawAction(void)
   res = true;
 }
 
-void SetAction::sendResult(void)
+void SetAction::sendResult(ostream &sout)
 
 {
   if (res)
     ArchitectureGhidra::writeStringStream(sout,"t");
   else
     ArchitectureGhidra::writeStringStream(sout,"f");
-  GhidraCommand::sendResult();
+  GhidraCommand::sendResult(sout);
 }
 
-void SetOptions::loadParameters(void)
+void SetOptions::loadParameters(istream &sin)
 
 {
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
   if (decoder != (Decoder *)0)
     delete decoder;
   decoder = new PackedDecode(ghidra);
@@ -432,7 +432,7 @@ SetOptions::~SetOptions(void)
     delete decoder;
 }
 
-void SetOptions::rawAction(void)
+void SetOptions::rawAction(istream &sin, ostream &sout)
 
 {
   res = false;
@@ -444,14 +444,14 @@ void SetOptions::rawAction(void)
   res = true;
 }
 
-void SetOptions::sendResult(void)
+void SetOptions::sendResult(ostream &sout)
 
 {
   if (res)
     ArchitectureGhidra::writeStringStream(sout,"t");
   else
     ArchitectureGhidra::writeStringStream(sout,"f");
-  GhidraCommand::sendResult();
+  GhidraCommand::sendResult(sout);
 }
 
 /// A command is read from the Ghidra client.  The matching GhidraCommand object is
@@ -482,7 +482,23 @@ int4 GhidraCapability::readCommand(istream &sin,ostream &out)
     out.flush();
     return 0;
   }
-  return (*iter).second->doit();
+  return (*iter).second->doit(sin, out);
+}
+
+int4 GhidraCapability::executeCommand(const string &name, istream &sin, ostream &out)
+{
+  map<string,GhidraCommand *>::const_iterator iter;
+  iter = commandmap.find(name);
+  if (iter == commandmap.end()) {
+    out.write("\000\000\001\006",4); // Command response header
+    out.write("\000\000\001\020",4);
+    out << "Bad command: " << name;
+    out.write("\000\000\001\021",4);
+    out.write("\000\000\001\007",4); // Command response closer
+    out.flush();
+    return 0;
+  }
+  return (*iter).second->doit(sin, out);
 }
 
 void GhidraCapability::shutDown(void)
@@ -507,6 +523,7 @@ void GhidraDecompCapability::initialize(void)
 
 } // End namespace ghidra
 
+#ifndef GHIDRA_LIB
 int main(int argc,char **argv)
 
 {
@@ -527,3 +544,4 @@ int main(int argc,char **argv)
   }
   GhidraCapability::shutDown();
 }
+#endif

@@ -30,16 +30,16 @@ void GhidraSignatureCapability::initialize(void)
   commandmap["setSignatureSettings"] = new SetSignatureSettings();
 }
 
-void SignaturesAt::loadParameters(void)
+void SignaturesAt::loadParameters(istream &sin)
 
 {
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
   PackedDecode decoder(ghidra);
   ArchitectureGhidra::readStringStream(sin,decoder);
   addr = Address::decode(decoder); // Parse XML for functions address
 }
 
-void SignaturesAt::rawAction(void)
+void SignaturesAt::rawAction(istream &sin, ostream &sout)
 
 {
   Funcdata *fd = ghidra->symboltab->getGlobalScope()->queryFunction(addr);
@@ -75,7 +75,7 @@ void SignaturesAt::rawAction(void)
   sout.write("\000\000\001\017",4);
 }
 
-void GetSignatureSettings::rawAction(void)
+void GetSignatureSettings::rawAction(istream &sin, ostream &sout)
 
 {
   sout.write("\000\000\001\016",4); // Write output XML directly to outstream
@@ -94,18 +94,18 @@ void GetSignatureSettings::rawAction(void)
   sout.write("\000\000\001\017",4);
 }
 
-void SetSignatureSettings::loadParameters(void)
+void SetSignatureSettings::loadParameters(istream &sin)
 
 {
   string settingString;
-  GhidraCommand::loadParameters();
+  GhidraCommand::loadParameters(sin);
   ArchitectureGhidra::readStringStream(sin,settingString);
   istringstream s(settingString);
   s.unsetf(ios::dec | ios::hex | ios::oct);
   s >> settings;
 }
 
-void SetSignatureSettings::rawAction(void)
+void SetSignatureSettings::rawAction(istream &sin, ostream &sout)
 
 {
   if (GraphSigManager::testSettings(settings)) {

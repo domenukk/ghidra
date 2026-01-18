@@ -69,10 +69,10 @@ public class DecompileProcess {
 	private Runnable timeoutRunnable;
 
 	// Note: volatile for variables modified when we shutdown, potential from different thread
-	private volatile Process nativeProcess;
-	private volatile InputStream nativeIn;   // Input from decompiler
-	private volatile OutputStream nativeOut; // Output to decompiler
-	private volatile boolean statusGood;     // true if decompiler process is running
+	protected volatile Process nativeProcess;
+	protected volatile InputStream nativeIn;   // Input from decompiler
+	protected volatile OutputStream nativeOut; // Output to decompiler
+	protected volatile boolean statusGood;     // true if decompiler process is running
 
 	private int archId = -1;              // architecture id for decomp process
 	private DecompileCallback callback;   // Callback interface for decompiler
@@ -131,7 +131,7 @@ public class DecompileProcess {
 		return disposestate;
 	}
 
-	private void setup() throws IOException {
+	protected void setup() throws IOException {
 		if (disposestate != DisposeState.NOT_DISPOSED) {
 			throw new IOException("Decompiler has been disposed");
 		}

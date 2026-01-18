@@ -327,7 +327,7 @@ public class GnuDemanglerTest extends AbstractGenericTest {
 			demangler.createMangledContext(mangled, options, program, null);
 		DemangledObject result = demangler.demangle(mangledContext);
 		assertNotNull(result);
-		assertEquals("undefined TTextPanel::scroll(unsigned char,short,int)",
+		assertEquals("undefined .TTextPanel::scroll(unsigned char,short,int)",
 			result.getSignature(false));
 	}
 

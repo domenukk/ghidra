@@ -18,6 +18,9 @@ package ghidra.app.util.demangler.gnu;
 import java.io.File;
 import java.io.IOException;
 
+import com.sun.jna.Native;
+import com.sun.jna.Pointer;
+
 import generic.jar.ResourceFile;
 import ghidra.app.util.demangler.*;
 import ghidra.app.util.opinion.ElfLoader;
@@ -106,6 +109,57 @@ public class GnuDemangler implements Demangler {
 		}
 
 		try {
+			// Try JNA first (only if using modern demangler)
+            if (!GnuDemanglerOptions.GNU_DEMANGLER_V2_24.equals(options.getDemanglerName())) {
+			    try {
+				int nativeOptions = getDemangleOptions(options);
+				// System.err.println("Trying JNA demangle for: " + mangled + " options: " + nativeOptions);
+				Pointer ptr = GnuDemanglerNative.INSTANCE.cplus_demangle(mangled, nativeOptions);
+				if (ptr != null) {
+					String demangled = ptr.getString(0);
+					// System.err.println("JNA success: " + demangled);
+					Native.free(Pointer.nativeValue(ptr));
+					
+					demangled = demangled.trim();
+					if (demangled.length() == 0 || mangled.equals(demangled)) {
+						throw new DemangledException(true);
+					}
+
+					DemangledObject demangledObject =
+						parse(originalMangled, null, demangled, options); // Pass null for process?
+					if (demangledObject == null) {
+						return demangledObject;
+					}
+
+					if (globalPrefix != null) {
+						DemangledFunction dfunc = new DemangledFunction(originalMangled, demangled,
+							globalPrefix + demangledObject.getName());
+						dfunc.setNamespace(demangledObject.getNamespace());
+						demangledObject = dfunc;
+					}
+
+					if (isDwarf) {
+						DemangledAddressTable dat =
+							new DemangledAddressTable(originalMangled, demangled, (String) null, false);
+						dat.setSpecialPrefix("DWARF Debug ");
+						dat.setName(demangledObject.getName());
+						dat.setNamespace(demangledObject.getNamespace());
+						return dat;
+					}
+					return demangledObject;
+				} else {
+                    // JNA loaded but failed to demangle (returned null).
+                    // Do not fallback to process as it might be missing.
+                    throw new DemangledException(true);
+                }
+			    } catch (LinkageError | Exception e) {
+				    // Fallback to process if JNA fails to load or execute (e.g. library not found)
+                    // We catch LinkageError (UnsatisfiedLinkError) and Exception.
+				    System.err.println("JNA Demangler failed: " + e.getMessage());
+                    System.err.println("jna.library.path: " + System.getProperty("jna.library.path"));
+                    e.printStackTrace();
+			    }
+            }
 
 			GnuDemanglerNativeProcess process = getNativeProcess(options);
 			String demangled = process.demangle(mangled);
@@ -183,6 +237,23 @@ public class GnuDemangler implements Demangler {
 	 * @param options the options
 	 * @return true if the string should not be demangled
 	 */
+	private int getDemangleOptions(GnuDemanglerOptions options) {
+		int dmgl_options = 1; // DMGL_PARAMS
+		
+		GnuDemanglerFormat format = options.getDemanglerFormat();
+		switch (format) {
+			case AUTO: dmgl_options |= (1 << 8); break; // DMGL_AUTO
+			case GNUV3: dmgl_options |= (1 << 14); break; // DMGL_GNU_V3
+			case JAVA: dmgl_options |= (1 << 2); break; // DMGL_JAVA
+			case GNAT: dmgl_options |= (1 << 15); break; // DMGL_GNAT
+			case DLANG: dmgl_options |= (1 << 16); break; // DMGL_DLANG
+			case RUST: dmgl_options |= (1 << 17); break; // DMGL_RUST
+			default: break;
+		}
+		
+		return dmgl_options;
+	}
+
 	private boolean skip(String mangled, GnuDemanglerOptions options) {
 
 		// Ignore versioned symbols which are generally duplicated at the same address

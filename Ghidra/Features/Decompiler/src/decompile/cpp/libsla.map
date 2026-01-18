@@ -1,0 +1,4 @@
+{
+  global: Ghidra_Sleigh_*;
+  local: *;
+};

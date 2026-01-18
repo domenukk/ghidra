@@ -49,6 +49,7 @@ protected:
 public:
   const string &getName(void) const { return name; }	///< Get the capability name
   static int4 readCommand(istream &sin,ostream &out);	///< Dispatch a Ghidra command
+  static int4 executeCommand(const string &name, istream &sin, ostream &out);
   static void shutDown(void);				///< Release all GhidraCommand resources
 };
 
@@ -77,14 +78,12 @@ public:
 /// and sendResult() will send back any accumulated warning/error messages.
 class GhidraCommand {
 protected:
-  istream &sin;				///< The input stream from the Ghidra client
-  ostream &sout;			///< The output stream to the Ghidra client
   ArchitectureGhidra *ghidra;		///< The Architecture on which to perform the command
   int4 status;				///< Meta-command to system (0=wait for next command, 1=terminate process)
-  virtual void loadParameters(void);	///< Read parameters directing command execution
-  virtual void sendResult(void);	///< Send results of the command (if any) back to the Ghidra client
+  virtual void loadParameters(istream &sin);	///< Read parameters directing command execution
+  virtual void sendResult(ostream &sout);	///< Send results of the command (if any) back to the Ghidra client
 public:
-  GhidraCommand(void) : sin(cin),sout(cout) {
+  GhidraCommand(void) {
     ghidra = (ArchitectureGhidra *)0; 
   }					///< Construct given i/o streams
   virtual ~GhidraCommand(void) {}	///< Destructor
@@ -93,8 +92,8 @@ public:
   ///
   /// Configuration is assumed to have happened, and \b this object can immediately begin
   /// examining and manipulating data under the active Architecture object to perform the command.
-  virtual void rawAction(void)=0;
-  int4 doit(void);			///< Configure and execute the command, then send back results
+  virtual void rawAction(istream &sin, ostream &sout)=0;
+  int4 doit(istream &sin, ostream &sout);			///< Configure and execute the command, then send back results
 };
 
 /// \brief Command to \b register a new Program (executable) with the decompiler
@@ -111,11 +110,11 @@ class RegisterProgram : public GhidraCommand {
   string cspec;				///< Compiler specification to configure with
   string tspec;				///< Configuration (address-spaces) for the Translate object
   string corespec;			///< A description of core data-types for the TypeFactory object
-  virtual void loadParameters(void);
-  virtual void sendResult(void);
+  virtual void loadParameters(istream &sin);
+  virtual void sendResult(ostream &sout);
 public:
   int4 archid;				///< Resulting id of the program to send back
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b release all resources associated with a Program (executable) in the decompiler
@@ -125,11 +124,11 @@ public:
 /// The command expects a single string parameter encoding the id of the program.
 class DeregisterProgram : public GhidraCommand {
   int4 inid;				///< The id of the Architecture being terminated
-  virtual void loadParameters(void);
-  virtual void sendResult(void);
+  virtual void loadParameters(istream &sin);
+  virtual void sendResult(ostream &sout);
 public:
   int4 res;				///< The meta-command being issued to send back
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b flush all symbols associated with a Program (executable)
@@ -140,10 +139,10 @@ public:
 /// (re)fetch any symbols as needed.
 /// The command expects a single string parameter encoding the id of the program to flush.
 class FlushNative : public GhidraCommand {
-  virtual void sendResult(void);
+  virtual void sendResult(ostream &sout);
 public:
   int4 res;				///< Success status returned to the client (0=success)
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b decompile a specific function.
@@ -158,9 +157,9 @@ public:
 /// control-flow structures, symbol information, etc., are sent back to the client.
 class DecompileAt : public GhidraCommand {
   Address addr;				///< The entry point address of the function to decompile
-  virtual void loadParameters(void);
+  virtual void loadParameters(istream &sin);
 public:
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b structure a control-flow graph.
@@ -176,9 +175,9 @@ public:
 /// the XML description of the control-flow.
 class StructureGraph : public GhidraCommand {
   BlockGraph ingraph;				///< The control-flow graph to structure
-  virtual void loadParameters(void);
+  virtual void loadParameters(istream &sin);
 public:
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b set the \e root Action used by the decompiler or \b toggle output components.
@@ -210,11 +209,11 @@ public:
 class SetAction : public GhidraCommand {
   string actionstring;			///< The \e root Action to switch to
   string printstring;			///< The \e printing output configuration to toggle
-  virtual void loadParameters(void);
-  virtual void sendResult(void);
+  virtual void loadParameters(istream &sin);
+  virtual void sendResult(ostream &sout);
 public:
   bool res;				///< Set to \b true if the configuration action was successful
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to \b toggle \b options within the decompiler
@@ -228,13 +227,13 @@ public:
 /// configuration succeeded.
 class SetOptions : public GhidraCommand {
   Decoder *decoder;		///< The \<optionslist> decoder
-  virtual void loadParameters(void);
-  virtual void sendResult(void);
+  virtual void loadParameters(istream &sin);
+  virtual void sendResult(ostream &sout);
 public:
   bool res;				///< Set to \b true if the option change succeeded
   SetOptions(void) { decoder = (Decoder *)0; res = false; }	///< Constructor
   virtual ~SetOptions(void);
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 #ifdef __REMOTE_SOCKET__

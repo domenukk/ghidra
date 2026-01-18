@@ -210,7 +210,24 @@ public class GnuDemanglerNativeProcess {
 
 		String executableName =
 			applicationName + Platform.CURRENT_PLATFORM.getExecutableExtension();
-		File commandPath = Application.getOSFile(executableName);
+        // System.err.println("Looking for executable: " + executableName);
+		File commandPath = null;
+        try {
+            commandPath = Application.getOSFile(executableName);
+        } catch (OSFileNotFoundException e) {
+            // Fallback for tests/dev: check relative to project root
+            File fallback = new File("../../../Ghidra/os/linux64/" + executableName);
+            if (fallback.exists()) {
+                commandPath = fallback;
+            } else {
+                fallback = new File("../../os/linux64/" + executableName);
+                if (fallback.exists()) {
+                    commandPath = fallback;
+                } else {
+                     throw e;
+                }
+            }
+        }
 
 		String[] command = new String[] { commandPath.getAbsolutePath() };
 		if (!StringUtils.isBlank(options)) {

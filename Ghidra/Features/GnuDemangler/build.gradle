@@ -24,4 +24,9 @@ eclipse.project.name = 'Features GnuDemangler'
 
 dependencies {
 	api project(":Base")
+	api "net.java.dev.jna:jna:5.14.0"
+}
+
+test {
+	systemProperty "jna.library.path", "${projectDir}/../../../GPL/DemanglerGnu/src/demangler_gnu_v2_41/c"
 }

@@ -37,13 +37,26 @@ endif
 
 CXX=g++ -std=c++11
 
+# GLIBC compatibility settings
+GCC_ROOT=/usr/local/google/home/dmnk/android/main/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8
+GCC_LIB=$(GCC_ROOT)/lib/gcc/x86_64-linux/4.8.3
+SYSROOT=$(GCC_ROOT)/sysroot
+GLIBC_CFLAGS=--sysroot=$(SYSROOT) -I$(GCC_ROOT)/x86_64-linux/include/c++/4.8.3 -I$(GCC_ROOT)/x86_64-linux/include/c++/4.8.3/x86_64-linux
+GLIBC_LDFLAGS=--sysroot=$(SYSROOT) -L$(GCC_ROOT)/x86_64-linux/lib64 -L$(GCC_LIB) -B$(GCC_LIB) -static-libstdc++ -static-libgcc
+
+# The C compiler
+# CXX=g++
+CXX=clang++
+
+CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -O2 -Wall -Wno-sign-compare -fPIC $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
+
 # Debug flags
-DBG_CXXFLAGS=-g -Wall -Wno-sign-compare
+DBG_CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
 #DBG_CXXFLAGS=-g -pg -Wall -Wno-sign-compare
 #DBG_CXXFLAGS=-g -fprofile-arcs -ftest-coverage -Wall -Wno-sign-compare
 
 # Optimization flags
-OPT_CXXFLAGS=-O2 -Wall -Wno-sign-compare
+OPT_CXXFLAGS=-std=c++11 -fno-sized-deallocation -O2 -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
 
 YACC=bison
 
@@ -52,10 +65,10 @@ YACC=bison
 INCLUDES=
 BFDLIB=-lbfd
 
-LNK=-lz
+LNK=/usr/lib/x86_64-linux-gnu/libz.a
 
 # Source files
-ALL_SOURCE= $(wildcard *.cc)
+ALL_SOURCE= $(filter-out bfd_arch.cc loadimage_bfd.cc analyzesigs.cc sleighexample.cc codedata.cc, $(wildcard *.cc))
 ALL_NAMES=$(subst .cc,,$(ALL_SOURCE))
 UNITTEST_SOURCE= $(wildcard ../unittests/*.cc)
 UNITTEST_NAMES=$(subst .cc,,$(UNITTEST_SOURCE))
@@ -99,7 +112,7 @@ SPECIAL=consolemain sleighexample test
 # Any additional modules for the command line decompiler
 EXTRA= $(filter-out $(CORE) $(DECCORE) $(SLEIGH) $(GHIDRA) $(SLACOMP) $(SPECIAL),$(ALL_NAMES))
 
-EXECS=decomp_dbg decomp_opt decomp_test_dbg ghidra_dbg ghidra_opt sleigh_dbg sleigh_opt libdecomp_dbg.a libdecomp.a
+EXECS=decomp_dbg decomp_opt decomp_test_dbg ghidra_dbg ghidra_opt sleigh_dbg sleigh_opt libdecomp_dbg.a libdecomp.a libdecomp.so libsla.so
 
 # Possible conditional compilation flags
 #     __TERMINAL__             # Turn on terminal support for console mode
@@ -132,7 +145,7 @@ SLEIGH_OPT=
 
 # The SLEIGH library is built with console mode objects and it
 # uses the COMMANDLINE_* options
-LIBSLA_NAMES=$(CORE) $(SLEIGH) loadimage sleigh memstate emulate opbehavior
+LIBSLA_NAMES=$(CORE) $(SLEIGH) loadimage memstate emulate opbehavior ghidra_sleigh
 
 # The Decompiler library is built with console mode objects and it uses the COMMANDLINE_* options
 LIBDECOMP_NAMES=$(CORE) $(DECCORE) $(EXTRA) $(SLEIGH)
@@ -152,6 +165,8 @@ LIBSLA_SOURCE=$(LIBSLA_NAMES:%=%.cc) $(LIBSLA_NAMES:%=%.hh) \
 	partmap.hh error.hh slghparse.y pcodeparse.y xml.y slghscan.l loadimage_bfd.hh loadimage_bfd.cc
 LIBDECOMP_DBG_OBJS=$(LIBDECOMP_NAMES:%=com_dbg/%.o)
 LIBDECOMP_OPT_OBJS=$(LIBDECOMP_NAMES:%=com_opt/%.o)
+LIBDECOMP_SO_NAMES=$(GHIDRA_NAMES) ghidra_lib
+LIBDECOMP_SO_OBJS=$(LIBDECOMP_SO_NAMES:%=lib_opt/%.o)
 
 # conditionals to determine which dependency files to build
 DEPNAMES=com_dbg/depend com_opt/depend
@@ -229,6 +244,9 @@ sla_dbg/%.o:	%.cc
 	$(CXX) $(ARCH_TYPE) -c $(DBG_CXXFLAGS) $(ADDITIONAL_FLAGS) $(SLEIGH_DEBUG)      $< -o $@
 sla_opt/%.o:	%.cc
 	$(CXX) $(ARCH_TYPE) -c $(OPT_CXXFLAGS) $(ADDITIONAL_FLAGS) $(SLEIGH_OPT)        $< -o $@
+lib_opt/%.o:	%.cc
+	@mkdir -p lib_opt
+	$(CXX) $(ARCH_TYPE) -c -fPIC -DGHIDRA_LIB $(OPT_CXXFLAGS) $(ADDITIONAL_FLAGS) $(GHIDRA_OPT) $< -o $@
 
 grammar.cc:	grammar.y
 	$(YACC) -l -o $@ $<
@@ -297,6 +315,18 @@ libdecomp.a:	$(LIBDECOMP_OPT_OBJS)
 	rm -rf libdecomp.a
 	ar qc libdecomp.a $(LIBDECOMP_OPT_OBJS)
 	ranlib libdecomp.a
+
+LINK_FLAGS=$(GLIBC_LDFLAGS)
+
+libdecomp.so:	$(LIBDECOMP_SO_OBJS)
+	rm -rf libdecomp.so
+	$(CXX) -shared $(ARCH_TYPE) $(LINK_FLAGS) -o libdecomp.so $(LIBDECOMP_SO_OBJS)
+
+LIBSLA_SO_OBJS=$(LIBSLA_NAMES:%=lib_opt/%.o)
+
+libsla.so:	$(LIBSLA_SO_OBJS)
+	rm -rf libsla.so
+	$(CXX) -shared $(ARCH_TYPE) $(LINK_FLAGS) -Wl,--version-script=libsla.map -o libsla.so $(LIBSLA_SO_OBJS) $(LNK)
 
 sleighexamp_dir: slghscan.cc
 	rm -rf $(SLEIGHVERSION)
@@ -401,7 +431,7 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f com_dbg/*.o com_opt/*.o test_dbg/*.o ghi_dbg/*.o ghi_opt/*.o sla_dbg/*.o sla_opt/*.o
+	rm -f com_dbg/*.o com_opt/*.o test_dbg/*.o ghi_dbg/*.o ghi_opt/*.o sla_dbg/*.o sla_opt/*.o lib_opt/*.o
 	rm -f *.gcov com_dbg/*.gcno com_dbg/*.gcda
 
 resetgcov:
@@ -412,3 +442,7 @@ reallyclean:	clean
 	rm -rf com_dbg com_opt test_dbg ghi_dbg ghi_opt sla_dbg sla_opt
 	rm -f $(EXECS) TAGS *~
 
+
+debug_vars:
+	@echo "ALL_SOURCE=$(ALL_SOURCE)"
+	@echo "COMMANDLINE_NAMES=$(COMMANDLINE_NAMES)"

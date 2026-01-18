@@ -40,6 +40,9 @@ public class DecompileProcessFactory {
 	}
 
 	public synchronized static DecompileProcess get() {
+		if (Boolean.getBoolean("ghidra.decompiler.lib")) {
+			return new DecompileProcessLib();
+		}
 		getExePath();
 		DecompileProcess currentProcess = new DecompileProcess(exepath);
 		return currentProcess;

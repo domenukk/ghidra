@@ -578,6 +578,29 @@ void Sleigh::initialize(DocumentStorage &store)
   discache = new DisassemblyCache(this,cache,getConstantSpace(),parser_cachesize,parser_windowsize);
 }
 
+void Sleigh::initialize(const string &slafile)
+
+{
+  if (!isInitialized()) {
+    sla::FormatDecode decoder(this);
+    ifstream s(slafile.c_str(), std::ios_base::binary);
+    if (!s)
+      throw LowlevelError("Could not open .sla file: " + slafile);
+    decoder.ingestStream(s);
+    s.close();
+    decode(decoder);
+  }
+  else
+    reregisterContext();
+  uint4 parser_cachesize = 2;
+  uint4 parser_windowsize = 32;
+  if ((maxdelayslotbytes > 1)||(unique_allocatemask != 0)) {
+    parser_cachesize = 8;
+    parser_windowsize = 256;
+  }
+  discache = new DisassemblyCache(this,cache,getConstantSpace(),parser_cachesize,parser_windowsize);
+}
+
 /// \brief Obtain a parse tree for the instruction at the given address
 ///
 /// The tree may be cached from a previous access.  If the address

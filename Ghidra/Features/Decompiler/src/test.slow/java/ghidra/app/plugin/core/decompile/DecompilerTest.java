@@ -55,6 +55,9 @@ public class DecompilerTest extends AbstractGhidraHeadedIntegrationTest {
 		Function func = prog.getListing().getFunctionAt(addr);
 		DecompileResults decompResults = decompiler.decompileFunction(func,
 			DecompileOptions.SUGGESTED_DECOMPILE_TIMEOUT_SECS, TaskMonitor.DUMMY);
+		if (decompResults.getDecompiledFunction() == null) {
+			System.err.println("Decompilation failed: " + decompResults.getErrorMessage());
+		}
 		String decompilation = decompResults.getDecompiledFunction().getC();
 		Assert.assertNotNull(decompilation);
 	}

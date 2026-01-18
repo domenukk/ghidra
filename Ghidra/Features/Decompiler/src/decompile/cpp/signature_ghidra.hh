@@ -47,10 +47,10 @@ public:
 class SignaturesAt : public GhidraCommand {
   bool debug;						///< True if the command should return verbose feature encodings
   Address addr;						///< The entry point of the function to generate features for
-  virtual void loadParameters(void);
+  virtual void loadParameters(istream &sin);
 public:
   SignaturesAt(bool dbg) { debug = dbg; }		///< Constructor specifying response format
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to retrieve current decompiler settings being used for feature/signature generation
@@ -60,7 +60,7 @@ public:
 /// decompiler process.
 class GetSignatureSettings : public GhidraCommand {
 public:
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 /// \brief Command to provide the global settings used by the decompiler process during feature/signature generation
@@ -69,9 +69,9 @@ public:
 /// feature generation.  The command returns 't' indicating a valid setting was received or 'f' for an invalid setting.
 class SetSignatureSettings : public GhidraCommand {
   uint4 settings;			///< Opaque settings value being requested
-  virtual void loadParameters(void);
+  virtual void loadParameters(istream &sin);
 public:
-  virtual void rawAction(void);
+  virtual void rawAction(istream &sin, ostream &sout);
 };
 
 } // End namespace ghidra
