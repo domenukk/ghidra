@@ -40,9 +40,7 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Initialize library
         try {
-            System.out.println("DecompileProcessLib: Initializing native library...");
             libHandle = DecompilerNativeLib.ghidra_init();
-            System.out.println("DecompileProcessLib: Native library initialized. Handle: " + libHandle);
         } catch (Throwable t) {
             throw new IOException("Failed to load decompiler library: " + t.getMessage(), t);
         }
