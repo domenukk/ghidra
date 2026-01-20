@@ -48,7 +48,7 @@ GLIBC_LDFLAGS=--sysroot=$(SYSROOT) -L$(GCC_ROOT)/x86_64-linux/lib64 -L$(GCC_LIB)
 # CXX=g++
 CXX=clang++
 
-CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -O2 -Wall -Wno-sign-compare -fPIC $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
+CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -O2 -Wall -Wno-sign-compare -fPIC $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
 
 # Debug flags
 DBG_CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
@@ -56,13 +56,13 @@ DBG_CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -Wall -Wno-sign-compare $(GLI
 #DBG_CXXFLAGS=-g -fprofile-arcs -ftest-coverage -Wall -Wno-sign-compare
 
 # Optimization flags
-OPT_CXXFLAGS=-std=c++11 -fno-sized-deallocation -O2 -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
+OPT_CXXFLAGS=-std=c++11 -fno-sized-deallocation -O2 -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
 
 YACC=bison
 
 # libraries
 #INCLUDES=-I$(BFDHOME)/include
-INCLUDES=
+INCLUDES=-I/usr/lib/jvm/java-21-openjdk-amd64/include -I/usr/lib/jvm/java-21-openjdk-amd64/include/linux
 BFDLIB=-lbfd
 
 LNK=/usr/lib/x86_64-linux-gnu/libz.a
@@ -165,7 +165,7 @@ LIBSLA_SOURCE=$(LIBSLA_NAMES:%=%.cc) $(LIBSLA_NAMES:%=%.hh) \
 	partmap.hh error.hh slghparse.y pcodeparse.y xml.y slghscan.l loadimage_bfd.hh loadimage_bfd.cc
 LIBDECOMP_DBG_OBJS=$(LIBDECOMP_NAMES:%=com_dbg/%.o)
 LIBDECOMP_OPT_OBJS=$(LIBDECOMP_NAMES:%=com_opt/%.o)
-LIBDECOMP_SO_NAMES=$(GHIDRA_NAMES) ghidra_lib
+LIBDECOMP_SO_NAMES=$(GHIDRA_NAMES) ghidra_decompiler_jni
 LIBDECOMP_SO_OBJS=$(LIBDECOMP_SO_NAMES:%=lib_opt/%.o)
 
 # conditionals to determine which dependency files to build

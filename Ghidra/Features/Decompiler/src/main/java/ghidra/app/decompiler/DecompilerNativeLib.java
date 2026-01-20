@@ -1,24 +1,20 @@
 package ghidra.app.decompiler;
 
-import com.sun.jna.Callback;
-import com.sun.jna.Library;
-import com.sun.jna.Native;
-import com.sun.jna.Pointer;
 
-public interface DecompilerNativeLib extends Library {
-    DecompilerNativeLib INSTANCE = Native.load("decomp", DecompilerNativeLib.class);
 
-    interface ReadCallback extends Callback {
-        int invoke(Pointer handle, Pointer buf, int len);
+public class DecompilerNativeLib {
+
+    public interface ReadCallback {
+        int invoke(long handle, byte[] buf, int len);
     }
 
-    interface WriteCallback extends Callback {
-        int invoke(Pointer handle, Pointer buf, int len);
+    public interface WriteCallback {
+        int invoke(long handle, byte[] buf, int len);
     }
 
-    Pointer ghidra_init();
+    public static native long ghidra_init();
     
-    int ghidra_run_loop(Pointer handle, ReadCallback read_cb, WriteCallback write_cb);
+    public static native int ghidra_run_loop(long handle, ReadCallback read_cb, WriteCallback write_cb);
     
-    void ghidra_cleanup(Pointer handle);
+    public static native void ghidra_cleanup(long handle);
 }

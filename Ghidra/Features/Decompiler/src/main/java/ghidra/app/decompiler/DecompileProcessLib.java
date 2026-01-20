@@ -4,12 +4,12 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 
-import com.sun.jna.Pointer;
+
 
 public class DecompileProcessLib extends DecompileProcess {
 
     private Thread libThread;
-    private Pointer libHandle;
+    private long libHandle;
     private DecompilerNativeLib.ReadCallback readCb;
     private DecompilerNativeLib.WriteCallback writeCb;
     private PipedInputStream cppIn;
@@ -40,7 +40,7 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Initialize library
         try {
-            libHandle = DecompilerNativeLib.INSTANCE.ghidra_init();
+            libHandle = DecompilerNativeLib.ghidra_init();
         } catch (Throwable t) {
             throw new IOException("Failed to load decompiler library: " + t.getMessage(), t);
         }
@@ -48,13 +48,8 @@ public class DecompileProcessLib extends DecompileProcess {
         // Define callbacks
         readCb = (handle, buf, len) -> {
             try {
-                byte[] b = new byte[len];
-                int n = cppIn.read(b);
-                if (n > 0) {
-                    buf.write(0, b, 0, n);
-                    return n;
-                }
-                return 0;
+                int n = cppIn.read(buf, 0, len);
+                return (n < 0) ? 0 : n;
             } catch (IOException e) {
                 return 0;
             }
@@ -62,8 +57,7 @@ public class DecompileProcessLib extends DecompileProcess {
         
         writeCb = (handle, buf, len) -> {
             try {
-                byte[] b = buf.getByteArray(0, len);
-                cppOut.write(b);
+                cppOut.write(buf, 0, len);
                 cppOut.flush();
                 return len;
             } catch (IOException e) {
@@ -73,7 +67,7 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Start thread
         libThread = new Thread(() -> {
-            DecompilerNativeLib.INSTANCE.ghidra_run_loop(libHandle, readCb, writeCb);
+            DecompilerNativeLib.ghidra_run_loop(libHandle, readCb, writeCb);
         }, "DecompilerLibThread");
         libThread.setDaemon(true);
         libThread.start();
