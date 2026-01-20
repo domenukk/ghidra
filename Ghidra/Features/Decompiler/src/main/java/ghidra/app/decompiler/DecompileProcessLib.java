@@ -40,13 +40,15 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Initialize library
         try {
+            System.out.println("DecompileProcessLib: Initializing native library...");
             libHandle = DecompilerNativeLib.ghidra_init();
+            System.out.println("DecompileProcessLib: Native library initialized. Handle: " + libHandle);
         } catch (Throwable t) {
             throw new IOException("Failed to load decompiler library: " + t.getMessage(), t);
         }
         
         // Define callbacks
-        readCb = (handle, buf, len) -> {
+        readCb = (buf, len) -> {
             try {
                 int n = cppIn.read(buf, 0, len);
                 return (n < 0) ? 0 : n;
@@ -55,7 +57,7 @@ public class DecompileProcessLib extends DecompileProcess {
             }
         };
         
-        writeCb = (handle, buf, len) -> {
+        writeCb = (buf, len) -> {
             try {
                 cppOut.write(buf, 0, len);
                 cppOut.flush();

@@ -88,6 +88,8 @@ public:
 
 JNIEXPORT jlong JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1init
   (JNIEnv *env, jclass cls) {
+    printf("JNI Decompiler Initialized!\n");
+    fflush(stdout);
     AttributeId::initialize();
     ElementId::initialize();
     CapabilityPoint::initializeAll();

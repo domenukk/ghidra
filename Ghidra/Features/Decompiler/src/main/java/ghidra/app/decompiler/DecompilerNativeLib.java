@@ -4,12 +4,16 @@ package ghidra.app.decompiler;
 
 public class DecompilerNativeLib {
 
+    static {
+        System.loadLibrary("decomp");
+    }
+
     public interface ReadCallback {
-        int invoke(long handle, byte[] buf, int len);
+        int invoke(byte[] buf, int len);
     }
 
     public interface WriteCallback {
-        int invoke(long handle, byte[] buf, int len);
+        int invoke(byte[] buf, int len);
     }
 
     public static native long ghidra_init();

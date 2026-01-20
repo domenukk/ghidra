@@ -365,14 +365,14 @@ tags:
 com_dbg/depend:	$(COMMANDLINE_NAMES:%=%.cc)
 	mkdir -p com_dbg 
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(COMMANDLINE_DEBUG) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(COMMANDLINE_DEBUG) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,com_dbg/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 com_opt/depend:	$(COMMANDLINE_NAMES:%=%.cc)
 	mkdir -p com_opt
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(COMMANDLINE_OPT) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(COMMANDLINE_OPT) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,com_opt/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
@@ -386,42 +386,42 @@ test_dbg/depend:	$(TEST_NAMES:%=%.cc) $(UNITTEST_NAMES:%=%.cc)
 ghi_dbg/depend:	$(GHIDRA_NAMES_DBG:%=%.cc)
 	mkdir -p ghi_dbg
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(GHIDRA_DEBUG) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(GHIDRA_DEBUG) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,ghi_dbg/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 ghi_opt/depend:	$(GHIDRA_NAMES:%=%.cc)
 	mkdir -p ghi_opt 
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(GHIDRA_OPT) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(GHIDRA_OPT) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,ghi_opt/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 sla_dbg/depend:	$(SLEIGH_NAMES:%=%.cc)
 	mkdir -p sla_dbg
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(SLEIGH_DEBUG) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(SLEIGH_DEBUG) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,sla_dbg/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 sla_opt/depend:	$(SLEIGH_NAMES:%=%.cc)
 	mkdir -p sla_opt
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(SLEIGH_OPT) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(SLEIGH_OPT) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,sla_opt/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 com_opt/depend.lib_sla:	$(LIBSLA_NAMES:%=%.cc)
 	mkdir -p com_opt
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(COMMANDLINE_OPT) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(COMMANDLINE_OPT) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,com_opt/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 com_dbg/depend.lib_sla:	$(LIBSLA_NAMES:%=%.cc)
 	mkdir -p com_dbg
 	@set -e; rm -f $@; \
-	$(CXX) -MM $(COMMANDLINE_DEBUG) $^ > $@.$$$$; \
+	$(CXX) -MM $(INCLUDES) $(COMMANDLINE_DEBUG) $^ > $@.$$$$; \
 	sed 's,\(.*\)\.o[ :]*,com_dbg/\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
