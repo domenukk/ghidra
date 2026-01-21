@@ -18,7 +18,7 @@ public class DecompilerNativeLib {
 
     public static native long ghidra_init();
     
-    public static native int ghidra_run_loop(long handle, ReadCallback read_cb, WriteCallback write_cb);
+    public static native int ghidra_run_loop(long handle, ReadCallback readCb, WriteCallback writeCb, DecompileCallback callback);
     
     public static native void ghidra_cleanup(long handle);
 }

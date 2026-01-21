@@ -19,6 +19,16 @@ public class DecompileProcessLib extends DecompileProcess {
         super("libdecomp");
     }
 
+    private DecompileCallback libCallback;
+
+    @Override
+    public synchronized void registerProgram(DecompileCallback cback, String pspecxml,
+            String cspecxml, String tspecxml, String coretypesxml, ghidra.program.model.listing.Program program)
+            throws IOException, DecompileException {
+        libCallback = cback;
+        super.registerProgram(cback, pspecxml, cspecxml, tspecxml, coretypesxml, program);
+    }
+
     @Override
     protected void setup() throws IOException {
         if (getDisposeState() != DisposeState.NOT_DISPOSED) {
@@ -40,8 +50,12 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Initialize library
         try {
+            // System.out.println("DEBUG: DecompileProcessLib calling ghidra_init");
             libHandle = DecompilerNativeLib.ghidra_init();
+            // System.out.println("DEBUG: DecompileProcessLib ghidra_init returned " + libHandle);
         } catch (Throwable t) {
+            // System.out.println("DEBUG: DecompileProcessLib ghidra_init failed: " + t);
+            t.printStackTrace();
             throw new IOException("Failed to load decompiler library: " + t.getMessage(), t);
         }
         
@@ -67,7 +81,9 @@ public class DecompileProcessLib extends DecompileProcess {
         
         // Start thread
         libThread = new Thread(() -> {
-            DecompilerNativeLib.ghidra_run_loop(libHandle, readCb, writeCb);
+            // System.out.println("DEBUG: DecompileProcessLib thread starting ghidra_run_loop");
+            int status = DecompilerNativeLib.ghidra_run_loop(libHandle, readCb, writeCb, libCallback);
+            // System.out.println("DEBUG: DecompileProcessLib thread ghidra_run_loop returned " + status);
         }, "DecompilerLibThread");
         libThread.setDaemon(true);
         libThread.start();

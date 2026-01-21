@@ -51,6 +51,7 @@ public:
   static int4 readCommand(istream &sin,ostream &out);	///< Dispatch a Ghidra command
   static int4 executeCommand(const string &name, istream &sin, ostream &out);
   static void shutDown(void);				///< Release all GhidraCommand resources
+  static void registerCommand(const string &name, GhidraCommand *cmd);
 };
 
 /// \brief The core decompiler commands capability
@@ -106,12 +107,14 @@ public:
 ///   - The stripped down \<sleigh> tag describing address spaces for the program
 ///   - The \<coretypes> tag describing the built-in datatypes for the program
 class RegisterProgram : public GhidraCommand {
+protected:
   string pspec;				///< Processor specification to configure with
   string cspec;				///< Compiler specification to configure with
   string tspec;				///< Configuration (address-spaces) for the Translate object
   string corespec;			///< A description of core data-types for the TypeFactory object
   virtual void loadParameters(istream &sin);
   virtual void sendResult(ostream &sout);
+  virtual ArchitectureGhidra *createArchitecture(const string &pspec,const string &cspec,const string &tspec,const string &corespec,istream &sin,ostream &sout);
 public:
   int4 archid;				///< Resulting id of the program to send back
   virtual void rawAction(istream &sin, ostream &sout);

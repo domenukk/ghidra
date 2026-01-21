@@ -496,4 +496,5 @@ integrationTest {
 test {
 	systemProperty "ghidra.decompiler.lib", System.getProperty("ghidra.decompiler.lib")
 	systemProperty "jna.library.path", "${project.projectDir}/src/decompile/cpp"
+	systemProperty "java.library.path", "${project.projectDir}/src/decompile/cpp"
 }

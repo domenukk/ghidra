@@ -173,6 +173,10 @@ void RegisterProgram::loadParameters(istream &sin)
 }
 
 
+ArchitectureGhidra *RegisterProgram::createArchitecture(const string &pspec,const string &cspec,const string &tspec,const string &corespec,istream &sin,ostream &sout) {
+  return new ArchitectureGhidra(pspec,cspec,tspec,corespec,sin,sout);
+}
+
 void RegisterProgram::rawAction(istream &sin, ostream &sout)
 
 {
@@ -184,7 +188,7 @@ void RegisterProgram::rawAction(istream &sin, ostream &sout)
       open = i;			// Found open slot
     }
   }
-  ghidra = new ArchitectureGhidra(pspec,cspec,tspec,corespec,sin,sout);
+  ghidra = createArchitecture(pspec,cspec,tspec,corespec,sin,sout);
   pspec.clear();
   cspec.clear();
   tspec.clear();
@@ -507,6 +511,16 @@ void GhidraCapability::shutDown(void)
   map<string,GhidraCommand *>::iterator iter;
   for(iter=commandmap.begin();iter!=commandmap.end();++iter)
     delete (*iter).second;
+}
+
+void GhidraCapability::registerCommand(const string &name, GhidraCommand *cmd) {
+  map<string,GhidraCommand *>::iterator iter = commandmap.find(name);
+  if (iter != commandmap.end()) {
+    delete (*iter).second;
+    (*iter).second = cmd;
+  } else {
+    commandmap[name] = cmd;
+  }
 }
 
 void GhidraDecompCapability::initialize(void)

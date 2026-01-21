@@ -181,6 +181,19 @@ public class DecompileCallback {
 	}
 
 	/**
+	 * JNI Helper to get bytes using primitive types and space name
+	 */
+	public byte[] getBytes(long offset, String spaceName, int size) {
+		AddressSpace space = addrfactory.getAddressSpace(spaceName);
+		if (space == null) {
+			Msg.error(this, "Unknown address space name: " + spaceName);
+			return null;
+		}
+		Address addr = space.getAddress(offset);
+		return getBytes(addr, size);
+	}
+
+	/**
 	 * Collect any/all comments for the function starting at the indicated
 	 * address.  Filter based on selected comment types.
 	 * 
