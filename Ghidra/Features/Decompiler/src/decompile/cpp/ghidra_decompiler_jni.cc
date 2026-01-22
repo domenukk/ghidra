@@ -89,7 +89,6 @@ protected:
 
 
         if (effective_env->ExceptionCheck()) {
-            
             effective_env->ExceptionDescribe();
             effective_env->ExceptionClear();
             return traits_type::eof();
