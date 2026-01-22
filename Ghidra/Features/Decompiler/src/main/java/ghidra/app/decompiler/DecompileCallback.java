@@ -98,19 +98,6 @@ public class DecompileCallback {
 		debug = null;
 	}
 
-	protected DecompileCallback() {
-		program = null;
-		pcodelanguage = null;
-		pcodecompilerspec = null;
-		listing = null;
-		addrfactory = null;
-		dtmanage = null;
-		default_extrapop = 0;
-		cpool = null;
-		nativeMessage = null;
-		debug = null;
-	}
-
 	/**
 	 * Establish function and debug context for next decompilation
 	 * 
@@ -191,19 +178,6 @@ public class DecompileCallback {
 				"Decompiling " + funcEntry + ", error while accessing bytes: " + e.getMessage(), e);
 		}
 		return null;
-	}
-
-	/**
-	 * JNI Helper to get bytes using primitive types and space name
-	 */
-	public byte[] getBytes(long offset, String spaceName, int size) {
-		AddressSpace space = addrfactory.getAddressSpace(spaceName);
-		if (space == null) {
-			Msg.error(this, "Unknown address space name: " + spaceName);
-			return null;
-		}
-		Address addr = space.getAddress(offset);
-		return getBytes(addr, size);
 	}
 
 	/**

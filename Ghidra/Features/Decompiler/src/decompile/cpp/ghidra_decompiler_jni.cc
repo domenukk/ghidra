@@ -11,13 +11,12 @@ using namespace ghidra;
 using namespace std;
 
 #include <mutex>
-// Mutex removed to allow parallel decompilation
-// static std::mutex global_run_mutex;
+
 
 thread_local jobject current_callback = nullptr;
 thread_local JNIEnv* current_env = nullptr;
 
-// JNI Stream Buffer (unchanged)
+
 class JNIStreambuf : public std::streambuf {
     JNIEnv *env;
     jobject read_cb;
@@ -42,8 +41,7 @@ public:
         read_mid = env->GetMethodID(read_cls, "invoke", "([BI)I");
         env->DeleteLocalRef(read_cls);
         if (!read_mid) {
-            FILE *f = fopen("/tmp/ghidra_debug.log", "a");
-            if (f) { fprintf(f, "ERROR: GetMethodID for read_cb failed\n"); fclose(f); }
+            // ERROR: GetMethodID for read_cb failed
             return; // Or throw
         }
         
@@ -51,8 +49,6 @@ public:
         write_mid = env->GetMethodID(write_cls, "invoke", "([BI)I");
         env->DeleteLocalRef(write_cls);
         if (!write_mid) {
-            FILE *f = fopen("/tmp/ghidra_debug.log", "a");
-            if (f) { fprintf(f, "ERROR: GetMethodID for write_cb failed\n"); fclose(f); }
             return; // Or throw
         }
 
@@ -86,13 +82,11 @@ protected:
 
         if (!java_buffer) return traits_type::eof();
 
-        FILE *f = fopen("/tmp/ghidra_debug.log", "a");
-        if (f) { fprintf(f, "DEBUG: underflow calling read_cb\n"); fclose(f); }
+
 
         int bytes_read = effective_env->CallIntMethod(read_cb, read_mid, java_buffer, (jint)buffer.size());
         
-        FILE *f2 = fopen("/tmp/ghidra_debug.log", "a");
-        if (f2) { fprintf(f2, "DEBUG: underflow read_cb returned: %d\n", bytes_read); fclose(f2); }
+
 
         if (effective_env->ExceptionCheck()) {
             
@@ -203,84 +197,7 @@ protected:
 // Thread-local storage for the callback
 
 
-// JNI LoadImage Implementation
-class JNICallbackLoadImage : public LoadImage {
-public:
-    JNICallbackLoadImage(const string &f) : LoadImage(f) {}
-    
-    virtual void loadFill(uint1 *ptr, int4 size, const Address &addr) {
-        if (!current_env || !current_callback) {
-            memset(ptr, 0, size);
-            return;
-        }
 
-        jclass cls = current_env->GetObjectClass(current_callback);
-        // getBytes(long offset, String spaceName, int size) -> byte[]
-        jmethodID mid = current_env->GetMethodID(cls, "getBytes", "(JLjava/lang/String;I)[B");
-        if (!mid) {
-            current_env->ExceptionClear();
-            memset(ptr, 0, size);
-            return;
-        }
-        
-        jlong offset = (jlong)addr.getOffset();
-        jstring spaceName = current_env->NewStringUTF(addr.getSpace()->getName().c_str());
-        jint jsize = (jint)size;
-        
-        jbyteArray jbytes = (jbyteArray)current_env->CallObjectMethod(current_callback, mid, offset, spaceName, jsize);
-        
-        current_env->DeleteLocalRef(spaceName);
-        
-        if (current_env->ExceptionCheck()) {
-            current_env->ExceptionDescribe();
-            current_env->ExceptionClear();
-            memset(ptr, 0, size);
-            return;
-        }
-        
-        if (jbytes == nullptr) {
-            // DataUnavailError
-            throw DataUnavailError("Data unavailable");
-        }
-        
-        jint len = current_env->GetArrayLength(jbytes);
-        if (len > 0) {
-            int copy_len = (len < size) ? len : size;
-            current_env->GetByteArrayRegion(jbytes, 0, copy_len, (jbyte*)ptr);
-            if (copy_len < size) {
-                memset(ptr + copy_len, 0, size - copy_len);
-            }
-        } else {
-            memset(ptr, 0, size);
-        }
-        
-        current_env->DeleteLocalRef(jbytes);
-        current_env->DeleteLocalRef(cls);
-    }
-    
-    virtual string getArchType(void) const { return "jni_callback"; }
-    virtual void adjustVma(long adjust) {}
-};
-
-// Custom Architecture to use JNICallbackLoadImage
-class ArchitectureGhidraJNI : public ArchitectureGhidra {
-public:
-    ArchitectureGhidraJNI(const string &pspec, const string &cspec, const string &tspec, const string &corespec,
-                          istream &i, ostream &o)
-        : ArchitectureGhidra(pspec, cspec, tspec, corespec, i, o) {}
-
-    virtual void buildLoader(DocumentStorage &store) {
-        loader = new JNICallbackLoadImage("jni_loader");
-    }
-};
-
-// Custom RegisterProgram to use ArchitectureGhidraJNI
-class RegisterProgramJNI : public RegisterProgram {
-protected:
-    virtual ArchitectureGhidra *createArchitecture(const string &pspec,const string &cspec,const string &tspec,const string &corespec,istream &sin,ostream &sout) {
-        return new ArchitectureGhidraJNI(pspec,cspec,tspec,corespec,sin,sout);
-    }
-};
 
 
 
@@ -301,10 +218,6 @@ JNIEXPORT jlong JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1i
     ElementId::initialize();
     
     CapabilityPoint::initializeAll();
-    
-    // Register our custom command
-    
-    GhidraCapability::registerCommand("registerProgram", new RegisterProgramJNI());
     
     initialized = true;
     return (jlong)1;
@@ -335,7 +248,7 @@ JNIEXPORT jint JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1ru
         }
     };
 
-    // std::lock_guard<std::mutex> lock(global_run_mutex);
+
     
     EnvRestorer restorer(current_env, current_callback, env, callback);
     

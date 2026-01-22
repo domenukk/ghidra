@@ -26,9 +26,6 @@ apply plugin: 'eclipse'
 
 eclipse.project.name = 'Features Decompiler'
 
-test {
-	systemProperty "java.library.path", "${projectDir}/src/decompile/cpp"
-}
 
 dependencies {
 	api project(':Base')
