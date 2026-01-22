@@ -11,10 +11,11 @@ using namespace ghidra;
 using namespace std;
 
 #include <mutex>
-static std::mutex global_run_mutex;
+// Mutex removed to allow parallel decompilation
+// static std::mutex global_run_mutex;
 
-jobject current_callback = nullptr;
-JNIEnv* current_env = nullptr;
+thread_local jobject current_callback = nullptr;
+thread_local JNIEnv* current_env = nullptr;
 
 // JNI Stream Buffer (unchanged)
 class JNIStreambuf : public std::streambuf {
@@ -40,10 +41,20 @@ public:
         jclass read_cls = env->GetObjectClass(read_cb);
         read_mid = env->GetMethodID(read_cls, "invoke", "([BI)I");
         env->DeleteLocalRef(read_cls);
+        if (!read_mid) {
+            FILE *f = fopen("/tmp/ghidra_debug.log", "a");
+            if (f) { fprintf(f, "ERROR: GetMethodID for read_cb failed\n"); fclose(f); }
+            return; // Or throw
+        }
         
         jclass write_cls = env->GetObjectClass(write_cb);
         write_mid = env->GetMethodID(write_cls, "invoke", "([BI)I");
         env->DeleteLocalRef(write_cls);
+        if (!write_mid) {
+            FILE *f = fopen("/tmp/ghidra_debug.log", "a");
+            if (f) { fprintf(f, "ERROR: GetMethodID for write_cb failed\n"); fclose(f); }
+            return; // Or throw
+        }
 
         // Allocate reusable buffer
         jbyteArray local_buf = env->NewByteArray(buffer.size());
@@ -56,7 +67,6 @@ public:
     }
 
     virtual ~JNIStreambuf() {
-        
         sync();
         if (java_buffer) env->DeleteGlobalRef(java_buffer);
         if (read_cb) env->DeleteGlobalRef(read_cb);
@@ -76,8 +86,14 @@ protected:
 
         if (!java_buffer) return traits_type::eof();
 
+        FILE *f = fopen("/tmp/ghidra_debug.log", "a");
+        if (f) { fprintf(f, "DEBUG: underflow calling read_cb\n"); fclose(f); }
+
         int bytes_read = effective_env->CallIntMethod(read_cb, read_mid, java_buffer, (jint)buffer.size());
         
+        FILE *f2 = fopen("/tmp/ghidra_debug.log", "a");
+        if (f2) { fprintf(f2, "DEBUG: underflow read_cb returned: %d\n", bytes_read); fclose(f2); }
+
         if (effective_env->ExceptionCheck()) {
             
             effective_env->ExceptionDescribe();
@@ -110,12 +126,19 @@ protected:
     }
 
     virtual int_type overflow(int_type c) override {
+        // Sync first to make space
+        if (sync() == -1) return traits_type::eof();
         
         if (c != traits_type::eof()) {
-            *pptr() = (char)c;
-            pbump(1);
+            if (pptr() < epptr()) {
+                *pptr() = (char)c;
+                pbump(1);
+            } else {
+                // Buffer size is 0 or internal error
+                return traits_type::eof();
+            }
         }
-        return sync() == -1 ? traits_type::eof() : c;
+        return c;
     }
 
     virtual int sync() override {
@@ -259,45 +282,31 @@ protected:
     }
 };
 
-#include <csignal>
-#include <execinfo.h>
-#include <unistd.h>
 
-void segfault_handler(int sig) {
-    void *array[10];
-    size_t size;
-
-    // get void*'s for all entries on the stack
-    size = backtrace(array, 10);
-
-    // print out all the frames to stderr
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
 
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1init
   (JNIEnv *env, jclass cls) {
-    // printf("DEBUG: ghidra_init start\n"); fflush(stdout);
+    static std::mutex init_mutex;
+    std::lock_guard<std::mutex> lock(init_mutex);
+
     static bool initialized = false;
     if (initialized) {
-        // printf("DEBUG: ghidra_init already initialized\n"); fflush(stdout);
         return (jlong)1;
     }
     
-    // signal(SIGSEGV, segfault_handler); // REMOVED: Do not interfere with JVM signal handlers
-    
+
     AttributeId::initialize();
     ElementId::initialize();
+    
     CapabilityPoint::initializeAll();
     
     // Register our custom command
+    
     GhidraCapability::registerCommand("registerProgram", new RegisterProgramJNI());
     
     initialized = true;
-    // printf("DEBUG: ghidra_init done\n"); fflush(stdout);
     return (jlong)1;
 }
 
@@ -305,8 +314,7 @@ JNIEXPORT jlong JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1i
 
 JNIEXPORT jint JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1run_1loop
   (JNIEnv *env, jclass cls, jlong handle, jobject read_cb, jobject write_cb, jobject callback) {
-    // printf("DEBUG: ghidra_run_loop start\n"); fflush(stdout);
-    
+
     // RAII class to manage current_env and current_callback
     class EnvRestorer {
         JNIEnv*& target_env;
@@ -327,7 +335,7 @@ JNIEXPORT jint JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1ru
         }
     };
 
-    std::lock_guard<std::mutex> lock(global_run_mutex);
+    // std::lock_guard<std::mutex> lock(global_run_mutex);
     
     EnvRestorer restorer(current_env, current_callback, env, callback);
     
@@ -342,10 +350,8 @@ JNIEXPORT jint JNICALL Java_ghidra_app_decompiler_DecompilerNativeLib_ghidra_1ru
             status = GhidraCapability::readCommand(in_stream, out_stream);
         }
     } catch (const std::exception& e) {
-        fprintf(stderr, "Exception caught in ghidra_run_loop: %s\n", e.what());
         status = -1;
     } catch (...) {
-        fprintf(stderr, "Unknown exception caught in ghidra_run_loop\n");
         status = -1;
     }
     

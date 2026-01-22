@@ -1,36 +1,13 @@
 package ghidra.app.decompiler;
 
 import static org.junit.Assert.*;
-import java.io.File;
-import org.junit.Before;
 import org.junit.Test;
 
 public class DecompileLibTest {
 
     @org.junit.BeforeClass
     public static void setupClass() {
-        System.setProperty("jna.debug_load", "true");
         System.setProperty("ghidra.decompiler.lib", "true");
-        File libDir = new File("src/decompile/cpp");
-        if (!libDir.exists()) {
-             // Try full path if we are in root
-             libDir = new File("Ghidra/Features/Decompiler/src/decompile/cpp");
-        }
-        // System.out.println("DEBUG: libDir=" + libDir.getAbsolutePath() + ", exists=" + libDir.exists());
-        File libFile = new File(libDir, "libdecomp.so");
-        // System.out.println("DEBUG: libFile=" + libFile.getAbsolutePath() + ", exists=" + libFile.exists());
-        
-        String currentPath = libDir.getAbsolutePath();
-        String systemPaths = "/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib64:/lib64:/usr/lib:/lib";
-        System.setProperty("jna.library.path", currentPath + File.pathSeparator + systemPaths);
-        // System.out.println("DEBUG: jna.library.path=" + System.getProperty("jna.library.path"));
-        try {
-            System.load(libFile.getAbsolutePath());
-            // System.out.println("DEBUG: System.load success");
-        } catch (Throwable t) {
-            // System.out.println("DEBUG: System.load failed: " + t);
-            t.printStackTrace();
-        }
     }
 
     @Test

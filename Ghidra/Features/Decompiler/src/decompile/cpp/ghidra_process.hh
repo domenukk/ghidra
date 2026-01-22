@@ -94,6 +94,7 @@ public:
   /// Configuration is assumed to have happened, and \b this object can immediately begin
   /// examining and manipulating data under the active Architecture object to perform the command.
   virtual void rawAction(istream &sin, ostream &sout)=0;
+  virtual GhidraCommand *clone(void) const=0;		///< Clone the command
   int4 doit(istream &sin, ostream &sout);			///< Configure and execute the command, then send back results
 };
 
@@ -118,6 +119,7 @@ protected:
 public:
   int4 archid;				///< Resulting id of the program to send back
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new RegisterProgram(); }
 };
 
 /// \brief Command to \b release all resources associated with a Program (executable) in the decompiler
@@ -132,6 +134,7 @@ class DeregisterProgram : public GhidraCommand {
 public:
   int4 res;				///< The meta-command being issued to send back
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new DeregisterProgram(); }
 };
 
 /// \brief Command to \b flush all symbols associated with a Program (executable)
@@ -146,6 +149,7 @@ class FlushNative : public GhidraCommand {
 public:
   int4 res;				///< Success status returned to the client (0=success)
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new FlushNative(); }
 };
 
 /// \brief Command to \b decompile a specific function.
@@ -163,6 +167,7 @@ class DecompileAt : public GhidraCommand {
   virtual void loadParameters(istream &sin);
 public:
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new DecompileAt(); }
 };
 
 /// \brief Command to \b structure a control-flow graph.
@@ -181,6 +186,7 @@ class StructureGraph : public GhidraCommand {
   virtual void loadParameters(istream &sin);
 public:
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new StructureGraph(); }
 };
 
 /// \brief Command to \b set the \e root Action used by the decompiler or \b toggle output components.
@@ -217,6 +223,7 @@ class SetAction : public GhidraCommand {
 public:
   bool res;				///< Set to \b true if the configuration action was successful
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new SetAction(); }
 };
 
 /// \brief Command to \b toggle \b options within the decompiler
@@ -237,6 +244,7 @@ public:
   SetOptions(void) { decoder = (Decoder *)0; res = false; }	///< Constructor
   virtual ~SetOptions(void);
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new SetOptions(); }
 };
 
 #ifdef __REMOTE_SOCKET__

@@ -101,7 +101,7 @@ int4 ArchitectureGhidra::readToAnyBurst(istream &s)
       return c;
     }
     if (c<0)			// If pipe closed, our parent process is probably dead
-      exit(1);			// So we exit to avoid a runaway process
+      throw LowlevelError("Process pipe closed");			// So we exit to avoid a runaway process
   }
 }
 
@@ -129,7 +129,7 @@ bool ArchitectureGhidra::readBoolStream(istream &s)
       return res;
   }
   if (c<0)			// If pipe closed, our parent process is probably dead
-    exit(1);			// So we exit to avoid a runaway process
+    throw LowlevelError("Process pipe closed");			// So we exit to avoid a runaway process
   throw JavaError("alignment","Expecting string terminator");
 }
 
@@ -158,7 +158,7 @@ void ArchitectureGhidra::readStringStream(istream &s,string &res)
     if (c == 15) return;
   }
   if (c<0)			// If pipe closed, our parent process is probably dead
-    exit(1);			// So we exit to avoid a runaway process
+    throw LowlevelError("Process pipe closed");			// So we exit to avoid a runaway process
   throw JavaError("alignment","Expecting string terminator");
 }
 

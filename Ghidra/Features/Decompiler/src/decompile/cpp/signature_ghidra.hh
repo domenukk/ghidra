@@ -51,6 +51,7 @@ class SignaturesAt : public GhidraCommand {
 public:
   SignaturesAt(bool dbg) { debug = dbg; }		///< Constructor specifying response format
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new SignaturesAt(debug); }
 };
 
 /// \brief Command to retrieve current decompiler settings being used for feature/signature generation
@@ -61,6 +62,7 @@ public:
 class GetSignatureSettings : public GhidraCommand {
 public:
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new GetSignatureSettings(); }
 };
 
 /// \brief Command to provide the global settings used by the decompiler process during feature/signature generation
@@ -72,6 +74,7 @@ class SetSignatureSettings : public GhidraCommand {
   virtual void loadParameters(istream &sin);
 public:
   virtual void rawAction(istream &sin, ostream &sout);
+  virtual GhidraCommand *clone(void) const { return new SetSignatureSettings(); }
 };
 
 } // End namespace ghidra

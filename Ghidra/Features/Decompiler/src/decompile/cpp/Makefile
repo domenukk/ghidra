@@ -48,15 +48,15 @@ GLIBC_LDFLAGS=--sysroot=$(SYSROOT) -L$(GCC_ROOT)/x86_64-linux/lib64 -L$(GCC_LIB)
 # CXX=g++
 CXX=clang++
 
-CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -O2 -Wall -Wno-sign-compare -fPIC $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
+CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -O2 -Wall -Wno-sign-compare -fPIC -pthread -D_REENTRANT $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
 
 # Debug flags
-DBG_CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
+DBG_CXXFLAGS=-std=c++11 -fno-sized-deallocation -g -Wall -Wno-sign-compare -pthread -D_REENTRANT $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS)
 #DBG_CXXFLAGS=-g -pg -Wall -Wno-sign-compare
 #DBG_CXXFLAGS=-g -fprofile-arcs -ftest-coverage -Wall -Wno-sign-compare
 
 # Optimization flags
-OPT_CXXFLAGS=-std=c++11 -fno-sized-deallocation -O2 -Wall -Wno-sign-compare $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
+OPT_CXXFLAGS=-std=c++11 -fno-sized-deallocation -O2 -Wall -Wno-sign-compare -pthread -D_REENTRANT $(GLIBC_CFLAGS) $(GLIBC_LDFLAGS) $(INCLUDES)
 
 YACC=bison
 

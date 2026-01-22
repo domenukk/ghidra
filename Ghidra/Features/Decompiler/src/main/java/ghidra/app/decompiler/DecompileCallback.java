@@ -98,6 +98,19 @@ public class DecompileCallback {
 		debug = null;
 	}
 
+	protected DecompileCallback() {
+		program = null;
+		pcodelanguage = null;
+		pcodecompilerspec = null;
+		listing = null;
+		addrfactory = null;
+		dtmanage = null;
+		default_extrapop = 0;
+		cpool = null;
+		nativeMessage = null;
+		debug = null;
+	}
+
 	/**
 	 * Establish function and debug context for next decompilation
 	 * 

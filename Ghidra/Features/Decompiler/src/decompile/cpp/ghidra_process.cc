@@ -16,6 +16,7 @@
 #include "ghidra_process.hh"
 #include "flow.hh"
 #include "blockaction.hh"
+#include <mutex>
 
 #ifdef _WINDOWS
 #include <fcntl.h>
@@ -74,6 +75,7 @@ void connect_to_console(Funcdata *fd)
 ElementId ELEM_DOC = ElementId("doc",229);
 
 vector<ArchitectureGhidra *> archlist; // List of architectures currently running
+static std::mutex archlist_mutex;
 
 map<string,GhidraCommand *> GhidraCapability::commandmap; // List of commands we can receive from Ghidra proper
 
@@ -94,8 +96,11 @@ void GhidraCommand::loadParameters(istream &sin)
   type = ArchitectureGhidra::readToAnyBurst(sin);
   if (type != 15)
     throw JavaError("alignment","Expecting arch id end");
-  if ((id>=0)&&(id<archlist.size()))
-    ghidra = archlist[id];
+  {
+    std::lock_guard<std::mutex> lock(archlist_mutex);
+    if ((id>=0)&&(id<archlist.size()))
+      ghidra = archlist[id];
+  }
 
   if (ghidra == (ArchitectureGhidra *)0)
     throw JavaError("decompiler","No architecture registered with decompiler");
@@ -182,10 +187,13 @@ void RegisterProgram::rawAction(istream &sin, ostream &sout)
 {
   int4 i;
   int4 open = -1;
-  for(i=0;i<archlist.size();++i) {
-    ghidra = archlist[i];
-    if (ghidra == (ArchitectureGhidra *)0) {
-      open = i;			// Found open slot
+  {
+    std::lock_guard<std::mutex> lock(archlist_mutex);
+    for(i=0;i<archlist.size();++i) {
+      ghidra = archlist[i];
+      if (ghidra == (ArchitectureGhidra *)0) {
+        open = i;			// Found open slot
+      }
     }
   }
   ghidra = createArchitecture(pspec,cspec,tspec,corespec,sin,sout);
@@ -196,11 +204,14 @@ void RegisterProgram::rawAction(istream &sin, ostream &sout)
 
   DocumentStorage store;	// temp storage of initialization xml docs
   ghidra->init(store);
-  if (open == -1) {
-    open = archlist.size();
-    archlist.push_back((ArchitectureGhidra *)0);
+  {
+    std::lock_guard<std::mutex> lock(archlist_mutex);
+    if (open == -1) {
+      open = archlist.size();
+      archlist.push_back((ArchitectureGhidra *)0);
+    }
+    archlist[open] = ghidra;
   }
-  archlist[open] = ghidra;
   archid = open;
 }
 
@@ -224,8 +235,11 @@ void DeregisterProgram::loadParameters(istream &sin)
   type = ArchitectureGhidra::readToAnyBurst(sin);
   if (type!=15)
     throw JavaError("alignment","Expecting deregister id end");
-  if ((inid>=0)&&(inid<archlist.size()))
-    ghidra = archlist[inid];
+  {
+    std::lock_guard<std::mutex> lock(archlist_mutex);
+    if ((inid>=0)&&(inid<archlist.size()))
+      ghidra = archlist[inid];
+  }
 
   if (ghidra == (ArchitectureGhidra *)0)
     throw JavaError("decompiler","No architecture registered with decompiler");
@@ -245,7 +259,10 @@ void DeregisterProgram::rawAction(istream &sin, ostream &sout)
 #endif
   if (ghidra != (ArchitectureGhidra *)0) {
     res = 1;
-    archlist[inid] = (ArchitectureGhidra *)0;
+    {
+      std::lock_guard<std::mutex> lock(archlist_mutex);
+      archlist[inid] = (ArchitectureGhidra *)0;
+    }
     delete ghidra;
     ghidra = (ArchitectureGhidra *)0;
     status = 1;
@@ -310,8 +327,11 @@ void DecompileAt::rawAction(istream &sin, ostream &sout)
 #ifdef __REMOTE_SOCKET__
     connect_to_console(fd);
 #endif
-    ghidra->allacts.getCurrent()->reset( *fd );
-    ghidra->allacts.getCurrent()->perform( *fd );
+    Action *act = ghidra->allacts.getCurrent();
+    Action *clone = act->clone(ghidra->allacts.getGroup(ghidra->allacts.getCurrentName()));
+    clone->reset( *fd );
+    clone->perform( *fd );
+    delete clone;
   }
 
   sout.write("\000\000\001\016",4);
@@ -486,7 +506,10 @@ int4 GhidraCapability::readCommand(istream &sin,ostream &out)
     out.flush();
     return 0;
   }
-  return (*iter).second->doit(sin, out);
+  GhidraCommand *cmd = (*iter).second->clone();
+  int4 res = cmd->doit(sin, out);
+  delete cmd;
+  return res;
 }
 
 int4 GhidraCapability::executeCommand(const string &name, istream &sin, ostream &out)
@@ -502,7 +525,10 @@ int4 GhidraCapability::executeCommand(const string &name, istream &sin, ostream 
     out.flush();
     return 0;
   }
-  return (*iter).second->doit(sin, out);
+  GhidraCommand *cmd = (*iter).second->clone();
+  int4 res = cmd->doit(sin, out);
+  delete cmd;
+  return res;
 }
 
 void GhidraCapability::shutDown(void)

@@ -5,7 +5,14 @@ package ghidra.app.decompiler;
 public class DecompilerNativeLib {
 
     static {
-        System.loadLibrary("decomp");
+        try {
+            System.loadLibrary("decomp");
+        } catch (UnsatisfiedLinkError e) {
+            // Might be loaded manually (e.g. in tests) or not found.
+            // If it is strictly required, standard usage will fail later.
+            // But for tests that load it via System.load(abspath), this is fine.
+            System.err.println("NOTE: System.loadLibrary(\"decomp\") failed: " + e.getMessage());
+        }
     }
 
     public interface ReadCallback {
