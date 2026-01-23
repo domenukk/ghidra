@@ -34,8 +34,7 @@ dependencies {
 	integrationTestImplementation project(path: ':Base', configuration: 'testArtifacts')
 	integrationTestImplementation project(path: ':SoftwareModeling', configuration: 'testArtifacts')
 
-	api "net.java.dev.jna:jna:5.14.0"
-	api "net.java.dev.jna:jna-platform:5.14.0"
+
 }
 
 // Include buildable native source in distribution
@@ -490,12 +489,11 @@ rootProject.createInstallationZip {
 }
 
 integrationTest {
-	systemProperty "ghidra.decompiler.lib", System.getProperty("ghidra.decompiler.lib")
-	systemProperty "jna.library.path", "${project.projectDir}/src/decompile/cpp"
+
 }
 
 test {
 	systemProperty "ghidra.decompiler.lib", System.getProperty("ghidra.decompiler.lib")
-	systemProperty "jna.library.path", "${project.projectDir}/src/decompile/cpp"
+
 	systemProperty "java.library.path", "${project.projectDir}/src/decompile/cpp"
 }
